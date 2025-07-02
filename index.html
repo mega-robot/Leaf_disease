@@ -11,16 +11,13 @@
       text-align: center;
       padding: 30px;
     }
-
     h1 {
       margin-bottom: 20px;
       color: #333;
     }
-
     .btn-group {
       margin-bottom: 20px;
     }
-
     button {
       padding: 10px 20px;
       margin: 0 10px;
@@ -32,34 +29,29 @@
       cursor: pointer;
       transition: background-color 0.3s;
     }
-
     button:hover {
       background-color: #45a049;
     }
-
     #webcam-container, #image-preview {
       margin: 20px auto;
     }
-
     video, canvas, img {
       border: 2px solid #444;
       border-radius: 10px;
       max-width: 100%;
     }
-
     #label-container {
       margin-top: 20px;
       font-size: 18px;
       color: #444;
     }
-
     input[type="file"] {
       margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Teachable Machine Classifier</h1>
+  <h1>Leaf Disease Detection</h1>
 
   <div class="btn-group">
     <button onclick="startWebcam()">Use Webcam</button>
@@ -71,92 +63,89 @@
   <div id="image-preview"></div>
   <div id="label-container"></div>
 
-  <!-- Scripts -->
+  <!-- Scripts: Load tfjs and tmImage first -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
-<script>
-    const URL = "./my_model/";
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+  <script>
+    const modelURL = "./my_model/model.json";
+    const metadataURL = "./my_model/metadata.json";
     let model, webcam, labelContainer, maxPredictions;
 
     async function loadModel() {
-        try {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
+      try {
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
 
-            labelContainer = document.getElementById("label-container");
-            labelContainer.innerHTML = "";
-            for (let i = 0; i < maxPredictions; i++) {
-                labelContainer.appendChild(document.createElement("div"));
-            }
-
-            console.log("✅ Model loaded successfully.");
-        } catch (err) {
-            console.error("❌ Failed to load model:", err);
-            alert("Model loading failed. Check console for details.");
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+        for (let i = 0; i < maxPredictions; i++) {
+          labelContainer.appendChild(document.createElement("div"));
         }
+
+        console.log("✅ Model loaded successfully.");
+      } catch (err) {
+        console.error("❌ Failed to load model:", err);
+        alert("Model loading failed. Check console for details.");
+      }
     }
 
-    // Load model on page load
     window.onload = loadModel;
 
     async function startWebcam() {
-        if (!model) {
-            alert("Model not loaded yet. Please wait.");
-            return;
-        }
+      if (!model) {
+        alert("Model not loaded yet. Please wait.");
+        return;
+      }
 
-        stopWebcam(); // cleanup if needed
+      stopWebcam(); // Cleanup
+      webcam = new tmImage.Webcam(300, 300, true);
+      await webcam.setup();
+      await webcam.play();
+      window.requestAnimationFrame(loop);
 
-        webcam = new tmImage.Webcam(300, 300, true);
-        await webcam.setup();
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-
-        document.getElementById("webcam-container").innerHTML = "";
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        document.getElementById("image-preview").innerHTML = "";
+      document.getElementById("webcam-container").innerHTML = "";
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+      document.getElementById("image-preview").innerHTML = "";
     }
 
     function stopWebcam() {
-        if (webcam) {
-            webcam.stop();
-            webcam = null;
-            document.getElementById("webcam-container").innerHTML = "";
-        }
+      if (webcam) {
+        webcam.stop();
+        webcam = null;
+        document.getElementById("webcam-container").innerHTML = "";
+      }
     }
 
     async function loop() {
-        if (webcam) {
-            webcam.update();
-            await predict(webcam.canvas);
-            window.requestAnimationFrame(loop);
-        }
+      if (webcam) {
+        webcam.update();
+        await predict(webcam.canvas);
+        window.requestAnimationFrame(loop);
+      }
     }
 
     async function handleUpload(event) {
-        stopWebcam();
-        const file = event.target.files[0];
-        if (!file) return;
+      stopWebcam();
+      const file = event.target.files[0];
+      if (!file) return;
 
-        const img = document.createElement("img");
-        img.onload = async () => {
-            document.getElementById("image-preview").innerHTML = "";
-            document.getElementById("image-preview").appendChild(img);
-            await predict(img);
-        };
-        img.src = URL.createObjectURL(file);
+      const img = document.createElement("img");
+      img.onload = async () => {
+        document.getElementById("image-preview").innerHTML = "";
+        document.getElementById("image-preview").appendChild(img);
+        await predict(img);
+      };
+      img.src = URL.createObjectURL(file);
     }
 
     async function predict(input) {
-        const prediction = await model.predict(input);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(2) + "%";
-            labelContainer.childNodes[i].innerHTML = classPrediction;
-        }
+      const prediction = await model.predict(input);
+      for (let i = 0; i < maxPredictions; i++) {
+        const classPrediction =
+          prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(2) + "%";
+        labelContainer.childNodes[i].innerHTML = classPrediction;
+      }
     }
-</script>
+  </script>
 </body>
 </html>
